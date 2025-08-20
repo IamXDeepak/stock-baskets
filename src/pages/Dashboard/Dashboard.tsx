@@ -379,13 +379,13 @@ const Dashboard: React.FC = () => {
                                             <div className="flex space-x-2">
                                                 <button
                                                     onClick={() => handleInvestClick(basket.id)}
-                                                    className="flex-1 bg-green-50 text-green-700 py-2 px-4 rounded-lg font-semibold hover:bg-green-100 transition-colors duration-200 border border-green-200"
+                                                    className="flex-1 bg-green-50 text-green-700 py-2 px-4 rounded-lg font-semibold hover:bg-green-100 transition-colors duration-200 border border-green-200 cursor-pointer"
                                                 >
                                                     Add More
                                                 </button>
                                                 <button
-                                                    onClick={() => {/* Handle view details */ }}
-                                                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+                                                    onClick={() => handleInvestClick(basket.id)}
+                                                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-200 cursor-pointer"
                                                 >
                                                     View
                                                 </button>
@@ -494,8 +494,8 @@ const Dashboard: React.FC = () => {
                 )}
 
                 {/* Basket Detail Modal */}
-                {selectedBasket && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                {/* {selectedBasket && (
+                    <div className="fixed inset-0 bg-black bg-opacity-10 flex items-center justify-center p-4 z-50">
                         <div className="bg-white rounded-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
                             <div className="p-6 border-b border-gray-200">
                                 <div className="flex items-start justify-between">
@@ -564,7 +564,7 @@ const Dashboard: React.FC = () => {
                             </div>
                         </div>
                     </div>
-                )}
+                )} */}
             </div>
         </div>
     );

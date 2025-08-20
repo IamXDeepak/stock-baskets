@@ -25,7 +25,7 @@ const Mandate: React.FC = () => {
 
     // Form state
     const [automaticPayment, setAutomaticPayment] = useState(true);
-    const [rebalancing, setRebalancing] = useState<'monthly' | 'quarterly' | 'yearly'>('quarterly');
+    const [rebalancing, setRebalancing] = useState<'monthly' | 'quarterly' | 'yearly'>('monthly');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
@@ -52,7 +52,7 @@ const Mandate: React.FC = () => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
                 },
-                body: JSON.stringify(mandateData),
+                body: JSON.stringify({}),
             });
 
             if (!response.ok) {
