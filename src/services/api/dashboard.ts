@@ -5,7 +5,8 @@ import type {
     BasketsResponse,
     BasketResponse,
     SubscriptionRequest,
-    SubscriptionResponse
+    SubscriptionResponse,
+    InvestmentsResponse
 } from '../../types/api';
 
 export class DashboardApiService extends BaseApiService {
@@ -32,7 +33,7 @@ export class DashboardApiService extends BaseApiService {
         return this.post<SubscriptionResponse>(`/investments/${basketId}/subscribe`, data);
     }
 
-    //     async getInvestments() {
-    //   return this.get<InvestmentsResponse>(API_ENDPOINTS.INVESTMENTS.LIST);
-    // }
+    async getInvestments() {
+        return this.get<InvestmentsResponse>(API_ENDPOINTS.INVESTMENTS.LIST);
+    }
 }

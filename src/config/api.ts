@@ -19,21 +19,19 @@ export const API_ENDPOINTS = {
         RECENT_ACTIVITY: '/api/dashboard/activity',
         BASKETS: '/baskets',
     },
+    INVESTMENTS: {
+        LIST: '/investments', // http://3.7.225.218:1337/investments
+        SUBSCRIBE: (basketId: string) => `/investments/${basketId}/subscribe`,
+    },
     BASKETS: {
         LIST: '/baskets',
         GET: (id: string) => `/basket/${id}`,
-        SUBSCRIBE: (id: string) => `/investments/${id}/subscribe`,
     },
     SUBSCRIPTION: {
         PLANS: '/api/subscription/plans',
         SUBSCRIBE: '/api/subscription/subscribe',
         CANCEL: '/api/subscription/cancel',
         CURRENT: '/api/subscription/current',
-    },
-    INVESTMENTS: {
-        LIST: '/investments', // NEW - calls http://3.7.225.218:1337/investments
-        SUBSCRIBE: (basketId: string) => `/investments/${basketId}/subscribe`,
-        CANCEL: (id: string) => `/api/investments/${id}/cancel`,
     },
     MANDATE: {
         LIST: '/api/mandates',

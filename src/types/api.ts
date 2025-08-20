@@ -24,7 +24,7 @@ interface Subscription {
     date: string;
 }
 
-interface Investment {
+export interface Investment {
     userMobile: string;
     basketId: string;
     units: number;
@@ -33,7 +33,7 @@ interface Investment {
     mandate: any;
 }
 
-interface InvestmentsResponse {
+export interface InvestmentsResponse {
     status: string;
     code: number;
     data: Investment[];

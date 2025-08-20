@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
 import { TrendingUp, TrendingDown, PieChart, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import type { Investment, InvestmentsResponse } from '../../types/api';
 
 // Types for the API response
 interface Holding {
@@ -32,19 +32,64 @@ interface BasketsResponse {
 
 const Dashboard: React.FC = () => {
     const { user } = useAuth();
-    const navigate = useNavigate();
     const [baskets, setBaskets] = useState<Basket[]>([]);
+    const [investments, setInvestments] = useState<Investment[]>([])
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [selectedBasket, setSelectedBasket] = useState<Basket | null>(null);
 
     useEffect(() => {
+        fetchInvestment()
         fetchBaskets();
     }, []);
 
     const handleInvestClick = (basketId: string) => {
         // Navigate to subscribe page with basket ID
         window.location.href = `/subscribe?basketId=${basketId}`;
+    };
+
+    const fetchInvestment = async () => {
+        setLoading(true);
+        setError('');
+
+        try {
+            const token = localStorage.getItem('token');
+
+            if (!token) {
+                throw new Error('No authentication token found');
+            }
+
+            const response = await fetch('/api/investments', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data: InvestmentsResponse = await response.json();
+
+            if (data.status === 'success' && data.data) {
+                setInvestments(data.data);
+            } else {
+                throw new Error('Invalid response format');
+            }
+
+
+        } catch (err: any) {
+            setError(err.message || 'Failed to fetch investment');
+            console.error('Error fetching investment:', err);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    const getBasketById = (basketId: string) => {
+        return baskets.find(basket => basket.id === basketId);
     };
 
     const fetchBaskets = async () => {
@@ -242,6 +287,91 @@ const Dashboard: React.FC = () => {
                     </div>
                 </div>
 
+                {/* My Investments Section */}
+                {investments.length > 0 && (
+                    <div className="mb-8">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-2xl font-bold text-gray-900">My Investments</h2>
+                            <span className="text-sm text-gray-500">{investments.length} active investment{investments.length !== 1 ? 's' : ''}</span>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                            {investments.map((investment) => {
+                                const basket = getBasketById(investment.basketId);
+                                if (!basket) return null;
+
+                                return (
+                                    <div
+                                        key={investment.basketId}
+                                        className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200"
+                                    >
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div>
+                                                <h3 className="text-lg font-bold text-gray-900 mb-1">{basket.name}</h3>
+                                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRiskColor(basket.risk)}`}>
+                                                    {basket.risk} Risk
+                                                </span>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className={`flex items-center space-x-1 ${basket.oneDayChangePct >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                    {basket.oneDayChangePct >= 0 ? (
+                                                        <TrendingUp className="w-4 h-4" />
+                                                    ) : (
+                                                        <TrendingDown className="w-4 h-4" />
+                                                    )}
+                                                    <span className="font-semibold text-sm">{formatPercentage(basket.oneDayChangePct)}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="mb-4">
+                                            <div className="grid grid-cols-2 gap-4 mb-3">
+                                                <div>
+                                                    <p className="text-sm text-gray-600">Total Invested</p>
+                                                    <p className="text-lg font-bold text-gray-900">{formatCurrency(investment.totalInvested)}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm text-gray-600">Units Owned</p>
+                                                    <p className="text-lg font-bold text-gray-900">{investment.units}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Active Subscriptions */}
+                                        <div className="mb-4">
+                                            <p className="text-sm font-medium text-gray-700 mb-2">Active Subscriptions ({investment.subscriptions.length}):</p>
+                                            <div className="space-y-1 max-h-24 overflow-y-auto">
+                                                {investment.subscriptions.map((subscription: any, index: number) => (
+                                                    <div key={index} className="flex items-center justify-between text-xs bg-gray-50 p-2 rounded">
+                                                        <span className="text-gray-600 capitalize">{subscription.period}</span>
+                                                        <span className="font-medium">{subscription.units} units</span>
+                                                        <span className="text-gray-500">{formatCurrency(subscription.amount)}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="flex space-x-2">
+                                            <button
+                                                onClick={() => handleInvestClick(basket.id)}
+                                                className="flex-1 bg-green-50 text-green-700 py-2 px-4 rounded-lg font-semibold hover:bg-green-100 transition-colors duration-200 border border-green-200"
+                                            >
+                                                Add More
+                                            </button>
+                                            <button
+                                                onClick={() => {/* Handle view details */ }}
+                                                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+                                            >
+                                                View
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
                 {/* Show message if no baskets */}
                 {baskets.length === 0 ? (
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
@@ -251,67 +381,74 @@ const Dashboard: React.FC = () => {
                     </div>
                 ) : (
                     /* Baskets Grid */
-                    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {baskets.map((basket) => (
-                            <div
-                                key={basket.id}
-                                className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200 cursor-pointer"
-                                onClick={() => setSelectedBasket(basket)}
-                            >
-                                <div className="flex items-start justify-between mb-4">
-                                    <div>
-                                        <h3 className="text-lg font-bold text-gray-900 mb-1">{basket.name}</h3>
-                                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRiskColor(basket.risk)}`}>
-                                            {basket.risk} Risk
-                                        </span>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className={`flex items-center space-x-1 ${basket.oneDayChangePct >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                            {basket.oneDayChangePct >= 0 ? (
-                                                <TrendingUp className="w-4 h-4" />
-                                            ) : (
-                                                <TrendingDown className="w-4 h-4" />
-                                            )}
-                                            <span className="font-semibold text-sm">{formatPercentage(basket.oneDayChangePct)}</span>
+                    <div className="mb-5">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-2xl font-bold text-gray-900">Available Baskets</h2>
+                            <span className="text-sm text-gray-500">{baskets.length} Available Basket{baskets.length !== 1 ? 's' : ''}</span>
+                        </div>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                            {baskets.map((basket) => (
+                                <div
+                                    key={basket.id}
+                                    className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200 cursor-pointer"
+                                    onClick={() => setSelectedBasket(basket)}
+                                >
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div>
+                                            <h3 className="text-lg font-bold text-gray-900 mb-1">{basket.name}</h3>
+                                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRiskColor(basket.risk)}`}>
+                                                {basket.risk} Risk
+                                            </span>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className={`flex items-center space-x-1 ${basket.oneDayChangePct >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                {basket.oneDayChangePct >= 0 ? (
+                                                    <TrendingUp className="w-4 h-4" />
+                                                ) : (
+                                                    <TrendingDown className="w-4 h-4" />
+                                                )}
+                                                <span className="font-semibold text-sm">{formatPercentage(basket.oneDayChangePct)}</span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                <div className="mb-4">
-                                    <p className="text-2xl font-bold text-gray-900 mb-1">{formatCurrency(basket.currentValue)}</p>
-                                    <p className="text-sm text-gray-600">{basket.description}</p>
-                                </div>
-
-                                {/* Top Holdings Preview */}
-                                <div className="mb-4">
-                                    <p className="text-sm font-medium text-gray-700 mb-2">Top Holdings:</p>
-                                    <div className="space-y-1">
-                                        {basket.holdings.slice(0, 3).map((holding) => (
-                                            <div key={holding.symbol} className="flex items-center justify-between text-xs">
-                                                <span className="text-gray-600">{holding.symbol}</span>
-                                                <div className="flex items-center space-x-2">
-                                                    <span className="text-gray-500">{(holding.weight * 100).toFixed(0)}%</span>
-                                                    <span className={`${holding.changePct >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                        {formatPercentage(holding.changePct)}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        ))}
+                                    <div className="mb-4">
+                                        <p className="text-2xl font-bold text-gray-900 mb-1">{formatCurrency(basket.currentValue)}</p>
+                                        <p className="text-sm text-gray-600">{basket.description}</p>
                                     </div>
-                                </div>
 
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleInvestClick(basket.id);
-                                    }}
-                                    className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-600 transition-colors duration-200"
-                                >
-                                    Invest
-                                </button>
-                            </div>
-                        ))}
+                                    {/* Top Holdings Preview */}
+                                    <div className="mb-4">
+                                        <p className="text-sm font-medium text-gray-700 mb-2">Top Holdings:</p>
+                                        <div className="space-y-1">
+                                            {basket.holdings.slice(0, 3).map((holding) => (
+                                                <div key={holding.symbol} className="flex items-center justify-between text-xs">
+                                                    <span className="text-gray-600">{holding.symbol}</span>
+                                                    <div className="flex items-center space-x-2">
+                                                        <span className="text-gray-500">{(holding.weight * 100).toFixed(0)}%</span>
+                                                        <span className={`${holding.changePct >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                            {formatPercentage(holding.changePct)}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleInvestClick(basket.id);
+                                        }}
+                                        className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-600 transition-colors duration-200"
+                                    >
+                                        Invest
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
                     </div>
+
                 )}
 
                 {/* Basket Detail Modal */}

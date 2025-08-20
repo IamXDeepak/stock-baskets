@@ -1,6 +1,6 @@
 import { ApiInterceptor } from './interceptors';
 import type { RequestConfig } from './interceptors';
-import type { ApiResponse, PaginationParams } from '../../types/api';
+import type { ApiResponse } from '../../types/api';
 
 export class BaseApiService {
     protected api: ApiInterceptor;
