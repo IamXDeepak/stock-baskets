@@ -1,11 +1,3 @@
-export interface Holding {
-    symbol: string;
-    name: string;
-    weight: number;
-    price: number;
-    changePct: number;
-}
-
 export interface Basket {
     id: string;
     name: string;
@@ -86,7 +78,6 @@ export interface InvestmentSubscriptionResponse {
     }>;
 }
 
-// Update existing DashboardStats interface
 export interface DashboardStats {
     totalRevenue: number;
     activeUsers: number;
@@ -156,23 +147,6 @@ export interface ApiError {
     status: number;
     code?: string;
     details?: any;
-}
-
-export interface PaginationParams {
-    page?: number;
-    limit?: number;
-    sort?: string;
-    order?: 'asc' | 'desc';
-}
-
-export interface PaginatedResponse<T> {
-    data: T[];
-    pagination: {
-        page: number;
-        limit: number;
-        total: number;
-        totalPages: number;
-    };
 }
 
 

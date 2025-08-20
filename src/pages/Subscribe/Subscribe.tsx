@@ -1,37 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
 import { useApi } from '../../hooks/useApi';
-import { dashboardApi } from '../../services/api';
-import { ArrowLeft, PieChart, TrendingUp, TrendingDown, Check, AlertCircle, ChevronDown } from 'lucide-react';
-
-// Types for the API responses
-interface Holding {
-    symbol: string;
-    name: string;
-    weight: number;
-    price: number;
-    changePct: number;
-}
-
-interface Basket {
-    id: string;
-    name: string;
-    risk: 'Low' | 'Medium' | 'High';
-    label: string;
-    oneDayChangePct: number;
-    currentValue: number;
-    description: string;
-    holdings: Holding[];
-}
-
+import { dashboardApi, subscriptionApi } from '../../services/api';
+import { ArrowLeft, TrendingUp, TrendingDown, Check, AlertCircle, ChevronDown, LineChart } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ResponsiveContainer, CartesianGrid, XAxis, YAxis, Tooltip, Line } from 'recharts';
 interface SubscriptionRequest {
     period: 'daily' | 'weekly' | 'monthly';
     units: number;
 }
 
 const Subscribe: React.FC = () => {
-    const { user } = useAuth();
-
+    const navigate = useNavigate()
     // Get basketId from URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const basketId = urlParams.get('basketId');
@@ -41,7 +20,6 @@ const Subscribe: React.FC = () => {
     const [units, setUnits] = useState<number>(10);
     const [success, setSuccess] = useState(false);
 
-    // API calls using centralized structure
     const {
         data: basketData,
         loading: basketLoading,
@@ -55,11 +33,23 @@ const Subscribe: React.FC = () => {
         execute: subscribeToBasket
     } = useApi((data: SubscriptionRequest) => dashboardApi.subscribeToBasket(basketId!, data));
 
+
+    // const {
+    //     loading: graphLoading,
+    //     data: graphData,
+    //     execute: fetchGraphData
+    // } = useApi(() => subscriptionApi.graphData(basketId!, '1w'))
+
     const basket = basketData?.data?.[0] || null;
 
     useEffect(() => {
         if (basketId) {
             fetchBasket();
+            // fetchGraphData()
+            //         graphData.data.map(item => ({
+            //     date: new Date(item.timestamp).toLocaleDateString(),
+            //     value: item.value,
+            //   }));
         }
     }, [basketId]);
 
@@ -75,7 +65,7 @@ const Subscribe: React.FC = () => {
             setSuccess(true);
             // Redirect to mandate page after 2 seconds
             setTimeout(() => {
-                window.location.href = '/mandate';
+                navigate('/mandate', { state: { basketId } });
             }, 2000);
         }
     };
@@ -229,6 +219,18 @@ const Subscribe: React.FC = () => {
                                     <p className="text-sm text-gray-500">per unit</p>
                                 </div>
                             </div>
+                            {/* {!graphLoading && (
+                                <ResponsiveContainer width="100%" height={400}>
+                                    <LineChart data={graphData}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis dataKey="date" />
+                                        <YAxis />
+                                        <Tooltip />
+                                        <Line type="monotone" dataKey="value" stroke="#007bff" />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            )} */}
+
 
                             <p className="text-gray-600 mb-6">{basket.description}</p>
 

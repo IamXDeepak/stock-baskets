@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { ArrowLeft, PieChart, Check, AlertCircle, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Check, AlertCircle, ChevronDown } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface MandateRequest {
-    automaticPayment: boolean;
-    rebalancing: 'monthly' | 'quarterly' | 'yearly';
+    period: 'monthly' | 'quarterly' | 'yearly';
 }
 
 interface MandateResponse {
@@ -14,7 +13,15 @@ interface MandateResponse {
 }
 
 const Mandate: React.FC = () => {
-    const { user } = useAuth();
+
+    const navigate = useNavigate()
+    const urlParams = new URLSearchParams(window.location.search);
+    const basketId = urlParams.get('basketId');
+
+    if (!basketId) {
+        navigate('/dashboard')
+    }
+
 
     // Form state
     const [automaticPayment, setAutomaticPayment] = useState(true);
@@ -35,11 +42,11 @@ const Mandate: React.FC = () => {
             }
 
             const mandateData: MandateRequest = {
-                automaticPayment,
-                rebalancing
+
+                period: rebalancing
             };
 
-            const response = await fetch('/api/mandate', {
+            const response = await fetch(`/api/investments/${basketId}/mandate/${rebalancing}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -56,9 +63,8 @@ const Mandate: React.FC = () => {
 
             if (data.status === 'success') {
                 setSuccess(true);
-                // Redirect to dashboard after 2 seconds
                 setTimeout(() => {
-                    window.location.href = '/dashboard';
+                    navigate('/dashboard')
                 }, 2000);
             } else {
                 throw new Error('Mandate setup failed');

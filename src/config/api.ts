@@ -9,14 +9,8 @@ export const API_ENDPOINTS = {
     AUTH: {
         SEND_OTP: '/send-otp',
         VERIFY_OTP: '/verify-otp',
-        LOGIN: '/api/auth/login',
-        LOGOUT: '/api/auth/logout',
-        REFRESH_TOKEN: '/api/auth/refresh',
-        PROFILE: '/api/auth/profile',
     },
     DASHBOARD: {
-        STATS: '/api/dashboard/stats',
-        RECENT_ACTIVITY: '/api/dashboard/activity',
         BASKETS: '/baskets',
     },
     INVESTMENTS: {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Home, CreditCard, FileText, LogOut, Menu, X, PieChart, Bell, Settings, User, ChevronDown } from 'lucide-react';
+import { LogOut, Menu, X, PieChart, Bell, Settings, User, ChevronDown } from 'lucide-react';
 import { Outlet } from 'react-router-dom';
 
 interface LayoutProps {
@@ -13,10 +13,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const [currentPath, setCurrentPath] = useState(window.location.pathname);
 
-    const navigation = [
-        { name: 'Dashboard', href: '/dashboard', icon: Home },
-        { name: 'Subscribe', href: '/subscribe', icon: CreditCard },
-        { name: 'Mandate', href: '/mandate', icon: FileText },
+    const navigation: Array<any> = [
+        // { name: 'Dashboard', href: '/dashboard', icon: Home },
+        // { name: 'Subscribe', href: '/subscribe', icon: CreditCard },
+        // { name: 'Mandate', href: '/mandate', icon: FileText },
     ];
 
     useEffect(() => {
@@ -82,7 +82,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
                         {/* Desktop Navigation */}
                         <nav className="hidden md:flex items-center space-x-1">
-                            {navigation.map((item) => {
+                            {navigation.length > 0 && navigation.map((item) => {
                                 const isCurrentActive = isActive(item.href);
                                 return (
                                     <button

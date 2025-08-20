@@ -1,7 +1,6 @@
 import { BaseApiService } from './base';
 import { API_ENDPOINTS } from '../../config/api';
 import type {
-    DashboardStats,
     BasketsResponse,
     BasketResponse,
     SubscriptionRequest,
@@ -10,13 +9,6 @@ import type {
 } from '../../types/api';
 
 export class DashboardApiService extends BaseApiService {
-    async getStats() {
-        return this.get<DashboardStats>(API_ENDPOINTS.DASHBOARD.STATS);
-    }
-
-    async getRecentActivity() {
-        return this.get(API_ENDPOINTS.DASHBOARD.RECENT_ACTIVITY);
-    }
 
     // Get all baskets
     async getBaskets() {
