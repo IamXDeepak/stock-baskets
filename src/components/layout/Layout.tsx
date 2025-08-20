@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { LogOut, Menu, X, PieChart, Bell, Settings, User, ChevronDown } from 'lucide-react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 
 interface LayoutProps {
     children?: React.ReactNode;
@@ -12,6 +12,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const [currentPath, setCurrentPath] = useState(window.location.pathname);
+
+    const navigate = useNavigate()
 
     const navigation: Array<any> = [
         // { name: 'Dashboard', href: '/dashboard', icon: Home },
@@ -72,7 +74,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                         {/* Logo and Brand */}
                         <div className="flex items-center space-x-4">
                             <div className="flex items-center space-x-3">
-                                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center cursor-pointer" onClick={() => navigate('/dashboard')}>
                                     <PieChart className="w-5 h-5 text-white" />
                                 </div>
                                 <h1 className="text-xl font-bold text-gray-900 hidden sm:block">Stock Baskets</h1>

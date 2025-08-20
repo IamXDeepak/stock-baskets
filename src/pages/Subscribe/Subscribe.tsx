@@ -1,17 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useApi } from '../../hooks/useApi';
 import { dashboardApi, subscriptionApi } from '../../services/api';
-import { ArrowLeft, TrendingUp, TrendingDown, Check, AlertCircle, ChevronDown, LineChart } from 'lucide-react';
+import {
+    ArrowLeft, TrendingUp, TrendingDown, Check, AlertCircle, ChevronDown, LineChart
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { ResponsiveContainer, CartesianGrid, XAxis, YAxis, Tooltip, Line } from 'recharts';
+import {
+    ResponsiveContainer, CartesianGrid, XAxis, YAxis, Tooltip, Line, LineChart as RechartsLineChart
+} from 'recharts';
+
 interface SubscriptionRequest {
     period: 'daily' | 'weekly' | 'monthly';
     units: number;
 }
 
+interface GraphDataPoint {
+    timestamp: number;
+    value: number;
+}
+
 const Subscribe: React.FC = () => {
-    const navigate = useNavigate()
-    // Get basketId from URL parameters
+    const navigate = useNavigate();
     const urlParams = new URLSearchParams(window.location.search);
     const basketId = urlParams.get('basketId');
 
@@ -19,6 +28,7 @@ const Subscribe: React.FC = () => {
     const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
     const [units, setUnits] = useState<number>(10);
     const [success, setSuccess] = useState(false);
+    const [toSubscribe, setToSubscribe] = useState<boolean>(false)
 
     const {
         data: basketData,
@@ -33,37 +43,43 @@ const Subscribe: React.FC = () => {
         execute: subscribeToBasket
     } = useApi((data: SubscriptionRequest) => dashboardApi.subscribeToBasket(basketId!, data));
 
-
-    // const {
-    //     loading: graphLoading,
-    //     data: graphData,
-    //     execute: fetchGraphData
-    // } = useApi(() => subscriptionApi.graphData(basketId!, '1w'))
+    const {
+        loading: graphLoading,
+        data: graphData,
+        error: graphError,
+        execute: fetchGraphData
+    } = useApi<any>(() => subscriptionApi.graphData(basketId!, '1w'));
 
     const basket = basketData?.data?.[0] || null;
+
+    // Transform graph data for recharts with proper error handling
+    const graphPoints = React.useMemo(() => {
+        if (!graphData?.data || !Array.isArray(graphData.data)) {
+            return [];
+        }
+
+        return graphData.data.map((item: GraphDataPoint, index: number) => ({
+            date: new Date(item.timestamp).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric'
+            }),
+            value: item.value,
+            originalTimestamp: item.timestamp
+        }));
+    }, [graphData]);
 
     useEffect(() => {
         if (basketId) {
             fetchBasket();
-            // fetchGraphData()
-            //         graphData.data.map(item => ({
-            //     date: new Date(item.timestamp).toLocaleDateString(),
-            //     value: item.value,
-            //   }));
+            fetchGraphData();
         }
     }, [basketId]);
 
     const handleSubscribe = async () => {
-        const subscriptionData: SubscriptionRequest = {
-            period,
-            units
-        };
-
+        const subscriptionData: SubscriptionRequest = { period, units };
         const result = await subscribeToBasket(subscriptionData);
-
         if (result) {
             setSuccess(true);
-            // Redirect to mandate page after 2 seconds
             setTimeout(() => {
                 navigate('/mandate', { state: { basketId } });
             }, 2000);
@@ -102,6 +118,21 @@ const Subscribe: React.FC = () => {
         return `${sign}${percent.toFixed(1)}%`;
     };
 
+    // Custom tooltip for the chart
+    const CustomTooltip = ({ active, payload, label }: any) => {
+        if (active && payload && payload.length) {
+            return (
+                <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+                    <p className="text-gray-600 text-sm">{label}</p>
+                    <p className="text-blue-600 font-semibold">
+                        {formatCurrency(payload[0].value)}
+                    </p>
+                </div>
+            );
+        }
+        return null;
+    };
+
     // Loading state
     if (basketLoading) {
         return (
@@ -123,7 +154,7 @@ const Subscribe: React.FC = () => {
                         Error: {basketError?.message || 'No basket ID provided'}
                     </div>
                     <button
-                        onClick={() => window.location.href = '/dashboard'}
+                        onClick={() => navigate('/dashboard')}
                         className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
                     >
                         Back to Dashboard
@@ -152,32 +183,11 @@ const Subscribe: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            {/* <div className="bg-slate-700 text-white p-4">
-                <div className="max-w-7xl mx-auto flex items-center justify-between">
-                    <div className="flex items-center space-x-8">
-                        <div className="flex items-center space-x-2">
-                            <PieChart className="w-8 h-8" />
-                            <span className="text-xl font-bold">Stock Baskets</span>
-                        </div>
-                        <nav className="flex space-x-6">
-                            <a href="/dashboard" className="text-gray-300 hover:text-white">Dashboard</a>
-                            <a href="#" className="text-white font-medium">Subscribe</a>
-                        </nav>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center">
-                            <span className="text-sm font-medium">{user?.name?.charAt(0) || 'U'}</span>
-                        </div>
-                    </div>
-                </div>
-            </div> */}
-
-            <div className="max-w-4xl mx-auto p-6">
+        <div className="min-h-screen bg-gray-50 mx-auto max-w-7xl ">
+            <div className="mx-auto p-6">
                 {/* Back Button */}
                 <button
-                    onClick={() => window.location.href = '/dashboard'}
+                    onClick={() => navigate('/dashboard')}
                     className="flex items-center text-gray-600 hover:text-gray-900 mb-6"
                 >
                     <ArrowLeft className="w-5 h-5 mr-2" />
@@ -186,13 +196,12 @@ const Subscribe: React.FC = () => {
 
                 {/* Page Title */}
                 <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Subscribe</h1>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Checkout Basket and Subscribe</h1>
                     <p className="text-gray-600">Set up your investment subscription</p>
                 </div>
 
                 {basket && (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        {/* Left Column - Basket Overview */}
+                    <div className="lg:grid-cols-2 gap-8">
                         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                             <div className="flex items-start justify-between mb-6">
                                 <div>
@@ -219,18 +228,63 @@ const Subscribe: React.FC = () => {
                                     <p className="text-sm text-gray-500">per unit</p>
                                 </div>
                             </div>
-                            {/* {!graphLoading && (
-                                <ResponsiveContainer width="100%" height={400}>
-                                    <LineChart data={graphData}>
-                                        <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="date" />
-                                        <YAxis />
-                                        <Tooltip />
-                                        <Line type="monotone" dataKey="value" stroke="#007bff" />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            )} */}
 
+                            {/* Performance Chart */}
+                            <div className="mb-6">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                                    <LineChart className="w-5 h-5 mr-2" />
+                                    Performance Chart
+                                </h3>
+                                {graphLoading ? (
+                                    <div className="flex items-center justify-center py-12 bg-gray-50 rounded-lg">
+                                        <div className="text-center">
+                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                                            <p className="text-gray-500 text-sm">Loading chart...</p>
+                                        </div>
+                                    </div>
+                                ) : graphError ? (
+                                    <div className="flex items-center justify-center py-12 bg-red-50 rounded-lg">
+                                        <div className="text-center">
+                                            <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+                                            <p className="text-red-600 text-sm">Failed to load chart data</p>
+                                        </div>
+                                    </div>
+                                ) : graphPoints.length > 0 ? (
+                                    <div className="bg-gray-50 rounded-lg p-4">
+                                        <ResponsiveContainer width="100%" height={250}>
+                                            <RechartsLineChart data={graphPoints}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                                                <XAxis
+                                                    dataKey="date"
+                                                    tick={{ fontSize: 12 }}
+                                                    stroke="#6b7280"
+                                                />
+                                                <YAxis
+                                                    tick={{ fontSize: 12 }}
+                                                    stroke="#6b7280"
+                                                    tickFormatter={(value) => `$${value}`}
+                                                />
+                                                <Tooltip content={<CustomTooltip />} />
+                                                <Line
+                                                    type="monotone"
+                                                    dataKey="value"
+                                                    stroke="#3b82f6"
+                                                    strokeWidth={2}
+                                                    dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
+                                                    activeDot={{ r: 6, stroke: '#3b82f6', strokeWidth: 2 }}
+                                                />
+                                            </RechartsLineChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center justify-center py-12 bg-gray-50 rounded-lg">
+                                        <div className="text-center">
+                                            <LineChart className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                                            <p className="text-gray-500 text-sm">No chart data available</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
 
                             <p className="text-gray-600 mb-6">{basket.description}</p>
 
@@ -238,7 +292,7 @@ const Subscribe: React.FC = () => {
                             <div>
                                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Top Holdings</h3>
                                 <div className="space-y-2">
-                                    {basket.holdings.slice(0, 4).map((holding) => (
+                                    {basket.holdings?.slice(0, 4).map((holding: any) => (
                                         <div key={holding.symbol} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
                                             <div>
                                                 <p className="font-medium text-gray-900">{holding.symbol}</p>
@@ -251,115 +305,129 @@ const Subscribe: React.FC = () => {
                                                 </p>
                                             </div>
                                         </div>
-                                    ))}
+                                    )) || (
+                                            <p className="text-gray-500 text-sm">No holdings data available</p>
+                                        )}
                                 </div>
                             </div>
+                            {!toSubscribe && <button
+                                onClick={() => setToSubscribe(true)}
+                                disabled={subscribing || units < 1}
+                                className="w-full bg-blue-500 text-white py-4 px-6 rounded-lg font-semibold text-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 flex items-center justify-center mt-10 max-w-xl mx-auto"
+                            >
+
+                                Subscribe
+
+                            </button>}
+
                         </div>
 
-                        {/* Right Column - Subscription Form */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                            <h2 className="text-2xl font-bold text-gray-900 mb-2">Subscribe to {basket.name}</h2>
-                            <p className="text-gray-600 mb-8">Subscribe to the basket to invest regularly</p>
+                        {
+                            toSubscribe && <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-10">
+                                <h2 className="text-2xl font-bold text-gray-900 mb-2">Subscribe to {basket.name}</h2>
+                                <p className="text-gray-600 mb-8">Subscribe to the basket to invest regularly</p>
 
-                            <div className="space-y-6">
-                                {/* Recurring Payment Section */}
-                                <div>
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-6">Recurring Payment</h3>
+                                <div className="space-y-6">
+                                    {/* Recurring Payment Section */}
+                                    <div>
+                                        <h3 className="text-lg font-semibold text-gray-900 mb-6">Recurring Payment</h3>
 
-                                    {/* Frequency */}
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Frequency
-                                        </label>
-                                        <div className="relative">
-                                            <select
-                                                value={period}
-                                                onChange={(e) => setPeriod(e.target.value as 'daily' | 'weekly' | 'monthly')}
-                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-lg appearance-none bg-white"
-                                            >
-                                                <option value="daily">Daily</option>
-                                                <option value="weekly">Weekly</option>
-                                                <option value="monthly">Monthly</option>
-                                            </select>
-                                            <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                                        {/* Frequency */}
+                                        <div className="mb-6">
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Frequency
+                                            </label>
+                                            <div className="relative">
+                                                <select
+                                                    value={period}
+                                                    onChange={(e) => setPeriod(e.target.value as 'daily' | 'weekly' | 'monthly')}
+                                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-lg appearance-none bg-white"
+                                                >
+                                                    <option value="daily">Daily</option>
+                                                    <option value="weekly">Weekly</option>
+                                                    <option value="monthly">Monthly</option>
+                                                </select>
+                                                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                                            </div>
+                                        </div>
+
+                                        {/* Units */}
+                                        <div className="mb-6">
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Units
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max="1000"
+                                                value={units}
+                                                onChange={(e) => setUnits(Math.max(1, parseInt(e.target.value) || 1))}
+                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-lg"
+                                                placeholder="Enter number of units"
+                                            />
+                                            <p className="text-sm text-gray-500 mt-2">
+                                                {units} unit{units !== 1 ? 's' : ''} × {formatCurrency(basket.currentValue)} = {formatCurrency(basket.currentValue * units)} per {period.toLowerCase()} payment
+                                            </p>
+                                        </div>
+
+                                        {/* Summary */}
+                                        <div className="bg-blue-50 rounded-lg p-4 mb-6">
+                                            <h4 className="font-semibold text-gray-900 mb-2">Subscription Summary</h4>
+                                            <div className="space-y-1 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Basket:</span>
+                                                    <span className="font-medium">{basket.name}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Frequency:</span>
+                                                    <span className="font-medium">{getPeriodText()}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Units per payment:</span>
+                                                    <span className="font-medium">{units}</span>
+                                                </div>
+                                                <div className="flex justify-between border-t border-blue-200 pt-2 mt-2">
+                                                    <span className="text-gray-600">Amount per payment:</span>
+                                                    <span className="font-bold text-lg">{formatCurrency(basket.currentValue * units)}</span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    {/* Units */}
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Units
-                                        </label>
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            max="1000"
-                                            value={units}
-                                            onChange={(e) => setUnits(Math.max(1, parseInt(e.target.value) || 1))}
-                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-lg"
-                                            placeholder="Enter number of units"
-                                        />
-                                        <p className="text-sm text-gray-500 mt-2">
-                                            {units} unit{units !== 1 ? 's' : ''} × {formatCurrency(basket.currentValue)} = {formatCurrency(basket.currentValue * units)} per {period.toLowerCase()} payment
-                                        </p>
-                                    </div>
-
-                                    {/* Summary */}
-                                    <div className="bg-blue-50 rounded-lg p-4 mb-6">
-                                        <h4 className="font-semibold text-gray-900 mb-2">Subscription Summary</h4>
-                                        <div className="space-y-1 text-sm">
-                                            <div className="flex justify-between">
-                                                <span className="text-gray-600">Basket:</span>
-                                                <span className="font-medium">{basket.name}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-gray-600">Frequency:</span>
-                                                <span className="font-medium">{getPeriodText()}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-gray-600">Units per payment:</span>
-                                                <span className="font-medium">{units}</span>
-                                            </div>
-                                            <div className="flex justify-between border-t border-blue-200 pt-2 mt-2">
-                                                <span className="text-gray-600">Amount per payment:</span>
-                                                <span className="font-bold text-lg">{formatCurrency(basket.currentValue * units)}</span>
+                                    {/* Error Display */}
+                                    {subscribeError && (
+                                        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start space-x-3">
+                                            <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                                            <div>
+                                                <p className="text-sm font-medium text-red-800">Subscription Failed</p>
+                                                <p className="text-sm text-red-600">{subscribeError.message}</p>
                                             </div>
                                         </div>
-                                    </div>
-                                </div>
-
-                                {/* Error Display */}
-                                {subscribeError && (
-                                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start space-x-3">
-                                        <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-                                        <div>
-                                            <p className="text-sm font-medium text-red-800">Subscription Failed</p>
-                                            <p className="text-sm text-red-600">{subscribeError.message}</p>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Subscribe Button */}
-                                <button
-                                    onClick={handleSubscribe}
-                                    disabled={subscribing || units < 1}
-                                    className="w-full bg-blue-500 text-white py-4 px-6 rounded-lg font-semibold text-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 flex items-center justify-center"
-                                >
-                                    {subscribing ? (
-                                        <>
-                                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                                            Creating Subscription...
-                                        </>
-                                    ) : (
-                                        'Subscribe'
                                     )}
-                                </button>
 
-                                <p className="text-xs text-gray-500 text-center">
-                                    By subscribing, you agree to our terms and conditions. Your payment will be processed {getPeriodText().toLowerCase()}.
-                                </p>
+                                    {/* Subscribe Button */}
+                                    <button
+                                        onClick={handleSubscribe}
+                                        disabled={subscribing || units < 1}
+                                        className="w-full bg-blue-500 text-white py-4 px-6 rounded-lg font-semibold text-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 flex items-center justify-center mt-5"
+                                    >
+                                        {subscribing ? (
+                                            <>
+                                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                                                Creating Subscription...
+                                            </>
+                                        ) : (
+                                            'Subscribe'
+                                        )}
+                                    </button>
+
+                                    <p className="text-xs text-gray-500 text-center">
+                                        By subscribing, you agree to our terms and conditions. Your payment will be processed {getPeriodText().toLowerCase()}.
+                                    </p>
+                                </div>
                             </div>
-                        </div>
+                        }
+
                     </div>
                 )}
             </div>

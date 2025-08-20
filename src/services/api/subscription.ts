@@ -8,6 +8,6 @@ export class SubscriptionApiService extends BaseApiService {
     }
 
     async graphData(basketId: string, period: string) {
-        return this.get(`/api/baskets/${basketId}/chart/${period}`)
+        return this.get(`/baskets/${basketId}/chart/${period}`)
     }
 }
